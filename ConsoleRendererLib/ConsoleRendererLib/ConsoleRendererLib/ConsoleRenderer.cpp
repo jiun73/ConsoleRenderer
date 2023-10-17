@@ -16,32 +16,55 @@ void ConsoleApp::setCursor(const V2d_i& pos)
 //change le pinceau
 void ConsoleApp::setConsoleSettings(const ConsolePixel& pixel)
 {
-	pencil = pixel;
+	_pencil = pixel;
 	setConsoleColor(pixel.fg, pixel.bg);
 }
 
-void ConsoleApp::drawLineVertical(const V2d_i& pos, const int& length)
+//constructeur de ConsoleApp
+ConsoleApp::ConsoleApp()
+{
+	console = GetStdHandle(STD_OUTPUT_HANDLE);
+	input = GetStdHandle(STD_INPUT_HANDLE);
+	hideCursor();
+
+	SetConsoleMode(input, ENABLE_EXTENDED_FLAGS);
+	SetConsoleMode(input, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+
+	thread.start(1);
+	thread.queueJob([&](int)
+		{
+			while (true)
+				update();
+		});
+}
+
+//change la couleur du caractère et du fond, et change le caractère utilisé
+void ConsoleApp::pencil(const fgConsoleColors& fgcolor, const bgConsoleColors& bgcolor, const char& glyph) { _pencil = { bgcolor, fgcolor, glyph }; }
+
+//dessine une ligne verticale qui commence à 'pos', de longeur 'length'
+void ConsoleApp::vertical(const V2d_i& pos, const int& length)
 {
 	for (int y = 0; y < length; y++)
-		drawPixel({ pos.x, pos.y + y });
+		pix({ pos.x, pos.y + y });
 }
 
-void ConsoleApp::drawLineHorizontal(const V2d_i& pos, const int& length)
+//dessine une ligne horizontale qui commence à 'pos', de longeur 'length'
+void ConsoleApp::horizontal(const V2d_i& pos, const int& length)
 {
 	for (int x = 0; x < length; x++)
-		drawPixel({ x + pos.x, pos.y });
+		pix({ x + pos.x, pos.y });
 }
 
-
-void ConsoleApp::drawRect(const Rect& dest)
+//dessine un rectangle
+void ConsoleApp::rect(const Rect& dest)
 {
 	for (int y = 0; y < dest.sz.y; y++)
 		for (int x = 0; x < dest.sz.x; x++)
-			drawPixel({ x + dest.pos.x,y + dest.pos.y });
+			pix({ x + dest.pos.x,y + dest.pos.y });
 }
 
-//Adds given string to the screen buffer
-void ConsoleApp::drawText(const std::string& text, V2d_i pos)
+//dessine le texte donné
+void ConsoleApp::text(const std::string& text, V2d_i pos)
 {
 	int spos = pos.x;
 	for (auto& s : text)
@@ -53,8 +76,8 @@ void ConsoleApp::drawText(const std::string& text, V2d_i pos)
 			continue;
 		}
 
-		setDrawGlyph(s);
-		drawPixel(pos);
+		glyph(s);
+		pix(pos);
 		pos.x++;
 	}
 }
@@ -68,12 +91,12 @@ void ConsoleApp::hideCursor()
 }
 
 //vérifie si la position est en dedans de la fenêtre de la console
-bool ConsoleApp::isWithinScreen(const V2d_i& pos)
+bool ConsoleApp::pos_in_screen(const V2d_i& pos)
 {
 	if (pos.x < 0) return false;
 	if (pos.y < 0) return false;
 
-	V2d_i consoleSize = getConsoleSize();
+	V2d_i consoleSize = size();
 
 	if (pos.x >= consoleSize.x) return false;
 	if (pos.y >= consoleSize.y) return false;
@@ -82,7 +105,7 @@ bool ConsoleApp::isWithinScreen(const V2d_i& pos)
 }
 
 //donne la taille de la fenêtre de la console
-V2d_i ConsoleApp::getConsoleSize()
+V2d_i ConsoleApp::size()
 {
 	V2d_i size;
 	CONSOLE_SCREEN_BUFFER_INFO buff;
@@ -93,10 +116,10 @@ V2d_i ConsoleApp::getConsoleSize()
 	return size;
 }
 
-//push the screen buffer to the screen
+//déplace les élements en mémoire vers la console
 void ConsoleApp::present()
 {
-	V2d_i newSize = getConsoleSize() - 1;
+	V2d_i newSize = size() - 1;
 	if (oldSize != newSize)
 	{
 		hideCursor();
@@ -107,7 +130,7 @@ void ConsoleApp::present()
 	setCursor(0);
 	for (auto& o : screenBuffer)
 	{
-		if (isWithinScreen(o.first))
+		if (pos_in_screen(o.first))
 		{
 			setCursor(o.first);
 			setConsoleSettings(o.second);
@@ -115,4 +138,75 @@ void ConsoleApp::present()
 		}
 	}
 	screenBuffer.clear();
+}
+
+/*
+si une touche du clavier est tenu, ou 'code' est un 'Virtual-key code' de Windows
+* (voir: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)
+*/
+bool ConsoleApp::held_code(int code)
+{
+	return keys.at(code);
+}
+
+/*
+si une touche du clavier est tenu, selon le caractère
+*(note: il est probablement préférable d'utiliser des caractères alphanumériques)
+*/
+bool ConsoleApp::held(char character)
+{
+	int i = toupper(character);
+	bool b = keys.at(i) && cooldown.at(i);
+	cooldown.at(i) = base_cooldown.at(i);
+	return b;
+}
+
+/*
+si une touche du clavier est pesé, ou 'code' est un 'Virtual-key code' de Windows
+* (voir: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)
+*/
+bool ConsoleApp::pressed_code(int code)
+{ 
+	return (!last.at(code) && keys.at(code)); 
+}
+
+/*
+si une touche du clavier est pesé, selon le caractère
+*(note: il est probablement préférable d'utiliser des caractères alphanumériques)
+*/
+bool ConsoleApp::pressed(char character) 
+{ 
+	character = toupper(character);
+	return (!last.at((int)character) && keys.at((int)character)); 
+}
+
+#include <sstream>
+
+void ConsoleApp::update()
+{
+	//std::cout << "update event" << _mouse << std::endl;
+	ReadConsoleInput(input, InputRecord, 128, &Events);
+
+	for (size_t i = 0; i < Events; i++)
+	{
+		switch (InputRecord[i].EventType)
+		{
+		case MOUSE_EVENT:
+		{
+			_mouse.x = InputRecord[i].Event.MouseEvent.dwMousePosition.X;
+			_mouse.y = InputRecord[i].Event.MouseEvent.dwMousePosition.Y;
+		}
+
+		break;
+		default:
+			break;
+		}
+	}
+	FlushConsoleInputBuffer(input);
+}
+
+RunBool::~RunBool()
+{
+	app->keyboard_update();
+	app->present();
 }

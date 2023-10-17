@@ -57,6 +57,20 @@ struct ConsolePixel
 	char glyph = (char)219;
 };
 
+class ConsoleApp;
+
+class RunBool 
+{
+	ConsoleApp* app = nullptr;
+	bool isRunning = false;
+
+public:
+	RunBool(ConsoleApp* app, bool isRunning) : app(app), isRunning(isRunning) {}
+	~RunBool();
+
+	operator bool() const { return isRunning; };
+};
+
 class ConsoleApp
 {
 private:
@@ -64,13 +78,13 @@ private:
 	HANDLE input;
 	INPUT_RECORD InputRecord[128];
 	DWORD Events;
-	V2d_i mouse;
+	
 
 	ThreadPool thread;
 
 	std::map<V2d_i, ConsolePixel> screenBuffer;
 
-	ConsolePixel pencil;
+	ConsolePixel _pencil;
 	V2d_i cursor = { 0,0 };
 	V2d_i oldSize = 0;
 
@@ -79,131 +93,88 @@ private:
 
 	void setConsoleSettings(const ConsolePixel& pixel);
 	void setConsoleColor(const fgConsoleColors& fg, const bgConsoleColors& bg) { SetConsoleTextAttribute(console, fg | bg); }
-	void setDrawPencil(const ConsolePixel& pixel) { pencil = pixel; }
+	void setDrawPencil(const ConsolePixel& pixel) { _pencil = pixel; }
 	void setCursor(const V2d_i& pos);
 	void hideCursor();
 
 	std::array<bool, 255> last;
 	std::array<bool, 255> keys;
+	std::array<int, 255> cooldown;
+	std::array<int, 255> base_cooldown;
 
-	bool keyState(int code)
+	bool isRunning = true;
+
+	bool get_key_state(int code)
 	{
 		return (GetKeyState(code) & 0x8000);
 	}
 
-	void getKeysStates()
+	void get_key_states()
 	{
-		last = keys;
+		for (int i = 1; i < keys.size(); i++)
+			last.at(i) = keys.at(i);
 
 		for (int i = 1; i < keys.size(); i++)
-			keys.at(i) = keyState(i);
+			keys.at(i) = get_key_state(i);
 	}
+
+	void keyboard_update() { get_key_states(); }
+	void update();
+	void present();
 
 public:
-	ConsoleApp()
-	{
-		console = GetStdHandle(STD_OUTPUT_HANDLE);
-		input = GetStdHandle(STD_INPUT_HANDLE);
-		hideCursor();
+	V2d_i _mouse;
 
-		SetConsoleMode(input, ENABLE_EXTENDED_FLAGS);
-		std::cout << SetConsoleMode(input, ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_PROCESSED_INPUT);
-
-		thread.start(1);
-		thread.queueJob([&](int)
-			{
-				while(true)
-					update();
-			});
-	}
+	ConsoleApp();
 	~ConsoleApp() {}
 
-	void setDrawPencil	(const fgConsoleColors& fgcolor, const bgConsoleColors& bgcolor, const char& glyph) { pencil = { bgcolor, fgcolor, glyph}; }
-	void setDrawColor	(const fgConsoleColors& fg, const bgConsoleColors& bg) { setConsoleColor(fg, bg); pencil.fg = fg; pencil.bg = bg; }
-	void setDrawGlyph	(const char& _glyph) { pencil.glyph = _glyph; }
+	void pencil	(const fgConsoleColors& fgcolor, const bgConsoleColors& bgcolor, const char& glyph);
+	void color	(const fgConsoleColors& fg, const bgConsoleColors& bg) { setConsoleColor(fg, bg); _pencil.fg = fg; _pencil.bg = bg; }
+	void glyph	(const char& _glyph) { _pencil.glyph = _glyph; }
 
-	void drawLineVertical	(const V2d_i& pos, const int& length);
-	void drawLineHorizontal	(const V2d_i& pos, const int& length);
-	void drawRect			(const Rect& dest);
-	void drawPixel			(const V2d_i& pos) { if (!isWithinScreen(pos)) return; screenBuffer[pos] = pencil; }
-	void drawText			(const std::string& text, V2d_i pos);
-
-	void drawRect	(const int& x, const int& y, const int& w, const int& h) { return drawRect({ { x,y },{ w,h } }); }
-	void drawPixel	(const int& x, const int& y) { return drawPixel({ x,y }); }
-	void drawText	(const std::string& text, const int& x, const int& y) { drawText(text, { x,y }); }
+	void vertical		(const V2d_i& pos, const int& length);
+	void horizontal		(const V2d_i& pos, const int& length);
+	void rect			(const Rect& dest);
+	void pix			(const V2d_i& pos) { if (!pos_in_screen(pos)) return; screenBuffer[pos] = _pencil; }
+	void text			(const std::string& text, V2d_i pos);
 
 	void clear() { clearConsole(); screenBuffer.clear(); }
 
-	bool isWithinScreen(const V2d_i& pos);
-	V2d_i getConsoleSize();
+	bool pos_in_screen(const V2d_i& pos);
+	V2d_i size();
 
-	void present();
+	
 
-	bool held_code(int code)
-	{
-		return keys.at(code);
-	}
+	bool held_code		(int code);
+	bool held			(char character);
+	bool pressed_code	(int code);
+	bool pressed		(char character);
 
-	bool held(char character)
-	{
-		return keyState((int)character);
-	}
+	V2d_i mouse() 
+	{ 
+		HWND console_wnd = GetConsoleWindow();
+		POINT cursor_pos;
+		GetCursorPos(&cursor_pos);
 
-	bool pressed_code(int code)
-	{
-		return (!last.at(code) && keys.at(code));
-	}
-
-	bool pressed(char character)
-	{
-		return (!last.at((int)character) && keys.at((int)character));
-	}
-
-	V2d_i getMousePos()
-	{
-		return mouse;
-	}
-
-	bool didMouseClickOn(V2d_i pos)
-	{
-		return (pressed_code(VK_LBUTTON) && mouse == pos);
-	}
-
-	void update()
-	{
-		getKeysStates();
-
-		ReadConsoleInput(input, InputRecord, 128, &Events);
-
-		for (size_t i = 0; i < Events; i++)
+		if (console_wnd && ScreenToClient(console_wnd, &cursor_pos));
 		{
+			CONSOLE_FONT_INFO cfi;
+			GetCurrentConsoleFont(console, FALSE, &cfi);
 
-
-			switch (InputRecord[i].EventType)
-			{
-			case KEY_EVENT:
-			{
-				//printf("Key event: ");
-
-				//if (InputRecord[i].Event.KeyEvent.bKeyDown)
-				////	printf("key pressed\n");
-				//else printf("key released\n");
-			}
-			break;
-			case MOUSE_EVENT:
-			{
-				std::cout << "mouse event";
-
-				mouse.x = InputRecord[i].Event.MouseEvent.dwMousePosition.X;
-				mouse.y = InputRecord[i].Event.MouseEvent.dwMousePosition.Y;
-			}
-
-			break;
-			default:
-				break;
-			}
+			_mouse.x = ((int)cursor_pos.x / cfi.dwFontSize.X);
+			_mouse.y = ((int)cursor_pos.y / cfi.dwFontSize.Y);
+			return _mouse;
 		}
-		FlushConsoleInputBuffer(input);
+		
+		return 0; 
 	}
+
+	bool mouse_left_held() { return held_code(VK_LBUTTON); }
+	bool mouse_left_press() { return pressed_code(VK_LBUTTON); }
+	bool mouse_click_on(V2d_i pos) { return (pressed_code(VK_LBUTTON) && _mouse == pos); }
+
+	const RunBool&	run()	{ return RunBool(this, isRunning); }
+	void			close() { isRunning = false; }
+	friend RunBool;
 
 };

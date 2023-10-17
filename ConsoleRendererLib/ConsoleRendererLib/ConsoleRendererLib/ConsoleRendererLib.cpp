@@ -5,4 +5,4 @@
 #include "framework.h"
 
 // TODO: Il s'agit d'un exemple de fonction de bibliothèque
-char squareChar() { return 219; }
+char full() { return 219; }
