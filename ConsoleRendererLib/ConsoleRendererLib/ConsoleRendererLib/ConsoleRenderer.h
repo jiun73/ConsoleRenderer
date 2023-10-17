@@ -106,6 +106,9 @@ public:
 		input = GetStdHandle(STD_INPUT_HANDLE);
 		hideCursor();
 
+		SetConsoleMode(input, ENABLE_EXTENDED_FLAGS);
+		std::cout << SetConsoleMode(input, ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_PROCESSED_INPUT);
+
 		thread.start(1);
 		thread.queueJob([&](int)
 			{
@@ -143,7 +146,7 @@ public:
 
 	bool held(char character)
 	{
-		return keys.at((int)character);
+		return keyState((int)character);
 	}
 
 	bool pressed_code(int code)
@@ -168,9 +171,7 @@ public:
 
 	void update()
 	{
-		//getKeysStates();
-
-		last = keys;
+		getKeysStates();
 
 		ReadConsoleInput(input, InputRecord, 128, &Events);
 
@@ -182,16 +183,17 @@ public:
 			{
 			case KEY_EVENT:
 			{
-				bool pressed = InputRecord[i].Event.KeyEvent.bKeyDown;
-				if (pressed)
-					std::cout << "key pressed";
-				else
-					std::cout << "key released";
-				keys.at(InputRecord[i].Event.KeyEvent.wVirtualKeyCode) = pressed;
+				//printf("Key event: ");
+
+				//if (InputRecord[i].Event.KeyEvent.bKeyDown)
+				////	printf("key pressed\n");
+				//else printf("key released\n");
 			}
 			break;
 			case MOUSE_EVENT:
 			{
+				std::cout << "mouse event";
+
 				mouse.x = InputRecord[i].Event.MouseEvent.dwMousePosition.X;
 				mouse.y = InputRecord[i].Event.MouseEvent.dwMousePosition.Y;
 			}
