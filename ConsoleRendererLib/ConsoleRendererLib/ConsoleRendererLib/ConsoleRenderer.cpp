@@ -156,8 +156,11 @@ si une touche du clavier est tenu, selon le caractère
 bool ConsoleApp::held(char character)
 {
 	int i = toupper(character);
-	bool b = keys.at(i) && cooldown.at(i);
-	cooldown.at(i) = base_cooldown.at(i);
+	bool b = keys.at(i) && (cooldown.at(i) == 0);
+	if (cooldown.at(i) == 0)
+	{
+		cooldown.at(i) = base_cooldown;
+	}
 	return b;
 }
 

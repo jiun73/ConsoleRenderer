@@ -147,7 +147,6 @@
     <ClInclude Include="Vector2D.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ConsoleInput.h" />
     <ClCompile Include="ConsoleRenderer.cpp" />
     <ClCompile Include="ConsoleRendererLib.cpp" />
     <ClCompile Include="pch.cpp">

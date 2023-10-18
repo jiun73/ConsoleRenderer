@@ -27,22 +27,22 @@ int main()
 		app.glyph(' '); //met le caractère de dessin à ' '
 		app.rect({ {0, 0 }, { 16, 16 } }); //dessine un Rectangle à [0,0] de largeur 16 et de longueur 16
 		
-		if (app.pressed('a')) //si l'utilisateur pèse 'a'
+		if (app.held('a')) //si l'utilisateur pèse 'a'
 		{
 			pos.x -= 1; //bouge le vecteur position vers la droite (composante X - 1)
 		}
 
-		if (app.pressed('d')) //si l'utilisateur pèse 'd'
+		if (app.held('d')) //si l'utilisateur pèse 'd'
 		{
 			pos.x += 1; //bouge le vecteur position vers la gauche
 		}
 
-		if(app.pressed('w')) //si l'utilisateur pèse 'w'
+		if(app.held('w')) //si l'utilisateur pèse 'w'
 		{
 			pos.y -= 1; //haut
 		}
 
-		if (app.pressed('s'))
+		if (app.held('s'))
 		{
 			pos.y += 1; //bas
 		}

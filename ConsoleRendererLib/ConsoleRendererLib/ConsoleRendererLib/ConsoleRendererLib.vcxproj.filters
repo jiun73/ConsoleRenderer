@@ -47,9 +47,6 @@
     <ClCompile Include="ConsoleRenderer.cpp">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClCompile>
-    <ClCompile Include="ConsoleInput.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClCompile>
     <ClCompile Include="Threads.cpp">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClCompile>

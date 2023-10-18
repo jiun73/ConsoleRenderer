@@ -101,7 +101,7 @@ private:
 	std::array<bool, 255> last;
 	std::array<bool, 255> keys;
 	std::array<int, 255> cooldown;
-	std::array<int, 255> base_cooldown;
+	int base_cooldown = 10;
 
 	bool isRunning = true;
 
@@ -119,7 +119,15 @@ private:
 			keys.at(i) = get_key_state(i);
 	}
 
-	void keyboard_update() { get_key_states(); }
+	void keyboard_update() 
+	{ 
+		get_key_states();
+		for(auto& c : cooldown)
+		{
+			if (c > 0)
+				c--;
+		}
+	}
 	void update();
 	void present();
 
