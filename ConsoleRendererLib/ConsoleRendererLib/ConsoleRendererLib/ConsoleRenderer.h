@@ -160,6 +160,16 @@ public:
 	bool pressed_code	(int code);
 	bool pressed		(char character);
 
+	Rect getMaxWindow(HWND window)
+	{
+		RECT rectWorkArea;
+		MONITORINFO mi;
+		mi.cbSize = sizeof(mi);
+		::GetMonitorInfo(::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &mi);
+		rectWorkArea = mi.rcWork;
+		return { {rectWorkArea.left, rectWorkArea.top},{rectWorkArea.bottom - rectWorkArea.top, rectWorkArea.right - rectWorkArea.left} };
+	}
+
 	V2d_i mouse() 
 	{ 
 		HWND console_wnd = GetConsoleWindow();
@@ -168,11 +178,18 @@ public:
 
 		if (console_wnd && ScreenToClient(console_wnd, &cursor_pos));
 		{
-			CONSOLE_FONT_INFO cfi;
-			GetCurrentConsoleFont(console, FALSE, &cfi);
+			CONSOLE_FONT_INFOEX cfi;
+			GetCurrentConsoleFontEx(console, FALSE, &cfi);
+			COORD sz = GetConsoleFontSize(console, cfi.nFont);
+			
+			V2d_i max = getMaxWindow(console_wnd).sz;
+			V2d_i min = size();
 
-			_mouse.x = ((int)cursor_pos.x / cfi.dwFontSize.X);
-			_mouse.y = ((int)cursor_pos.y / cfi.dwFontSize.Y);
+			int fontX = (max.x / (double)min.x) * sz.X;
+			int fontY = (max.y / (double)min.y) * sz.Y;
+
+			_mouse.x = ((int)cursor_pos.x / sz.X);
+			_mouse.y = ((int)cursor_pos.y / sz.Y);
 			return _mouse;
 		}
 		
