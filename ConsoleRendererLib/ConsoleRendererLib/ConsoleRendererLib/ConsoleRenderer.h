@@ -176,24 +176,25 @@ public:
 		POINT cursor_pos;
 		GetCursorPos(&cursor_pos);
 
-		if (console_wnd && ScreenToClient(console_wnd, &cursor_pos));
+		if (console_wnd && ScreenToClient(console_wnd, &cursor_pos))
 		{
 			CONSOLE_FONT_INFOEX cfi;
 			GetCurrentConsoleFontEx(console, FALSE, &cfi);
-			COORD sz = GetConsoleFontSize(console, cfi.nFont);
-			
-			V2d_i max = getMaxWindow(console_wnd).sz;
-			V2d_i min = size();
+			cfi.dwFontSize.X = 8;
+			cfi.dwFontSize.Y = 16;
+			SetCurrentConsoleFontEx(console, FALSE, &cfi);
 
-			int fontX = (max.x / (double)min.x) * sz.X;
-			int fontY = (max.y / (double)min.y) * sz.Y;
-
-			_mouse.x = ((int)cursor_pos.x / sz.X);
-			_mouse.y = ((int)cursor_pos.y / sz.Y);
+			_mouse.x = ((int)cursor_pos.x / 8);
+			_mouse.y = ((int)cursor_pos.y / 16);
 			return _mouse;
 		}
 		
 		return 0; 
+	}
+
+	void set_cooldown(int s)
+	{
+		base_cooldown = s;
 	}
 
 	bool mouse_left_held() { return held_code(VK_LBUTTON); }
