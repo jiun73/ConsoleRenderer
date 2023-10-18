@@ -7,6 +7,7 @@
 #include "Vector2D.h"
 #include "Rect.h"
 #include "Threads.h"
+#include "Random.h"
 
 enum fgConsoleColors
 {
@@ -124,6 +125,7 @@ private:
 
 public:
 	V2d_i _mouse;
+	Random random;
 
 	ConsoleApp();
 	~ConsoleApp() {}

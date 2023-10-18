@@ -47,20 +47,15 @@ int main()
 			pos.y += 1; //bas
 		}
 		app.color(WHITE, BG_BLACK);
-
-		std::stringstream ss;
-		ss << app.mouse();
-
-		app.text(ss.str(), 10);
 		
 		if (app.mouse_left_press()) //si on fait un clic gauche
 		{
-			
-			app.text(ss.str(), app.mouse()); //dessine le texte 'Allo!' à la position 'app.mouse()' soit la souris
+			app.text("Allo!", app.mouse()); //dessine le texte 'Allo!' à la position 'app.mouse()' soit la souris
 		}
 
+		int ran = app.random.range(48, 74); //génère un nombre entre 48 et 74
 
-		app.pencil(WHITE, BG_DARK_BLUE, 'a'); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé
+		app.pencil(WHITE, BG_DARK_BLUE, ran); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé
 		app.pix(pos); //cela met le pixel en mémoire, avec la position 'pos'
 	}
 }

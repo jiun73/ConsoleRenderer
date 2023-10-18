@@ -53,5 +53,8 @@
     <ClCompile Include="Threads.cpp">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClCompile>
+    <ClCompile Include="Random.h">
+      <Filter>Fichiers d%27en-tête\Data</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
