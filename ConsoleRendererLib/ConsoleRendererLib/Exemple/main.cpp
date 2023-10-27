@@ -97,7 +97,7 @@ int main()
 			app.text("Allo!", app.mouse()); //dessine le texte 'Allo!' à la position 'app.mouse()' soit la souris
 		}
 
-		app.set_cooldown(100);
+		app.set_cooldown(0);
 		int ran = app.random.range(48, 74); //génère un nombre entre 48 et 74
 
 		app.pencil(WHITE, BG_DARK_BLUE, ran); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé

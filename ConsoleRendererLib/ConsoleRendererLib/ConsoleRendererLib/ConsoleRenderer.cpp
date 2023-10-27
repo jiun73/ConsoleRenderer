@@ -208,8 +208,24 @@ void ConsoleApp::update()
 	FlushConsoleInputBuffer(input);
 }
 
+#include <chrono>
+#include <thread>
+
 RunBool::~RunBool()
 {
 	app->keyboard_update();
 	app->present();
+
+	std::chrono::milliseconds frame_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch()
+	);
+
+	std::chrono::milliseconds frame_time = frame_end - app->frame_start;
+	std::chrono::milliseconds frame_min{1000 / 60000};
+
+	if (frame_time < frame_min)
+	{
+		std::chrono::milliseconds frame_diff = frame_min - frame_time;
+		std::this_thread::sleep_for(frame_diff);
+	}
 }

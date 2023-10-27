@@ -72,6 +72,8 @@ public:
 	operator bool() const { return isRunning; };
 };
 
+#include <chrono>
+
 class ConsoleApp
 {
 private:
@@ -80,6 +82,7 @@ private:
 	INPUT_RECORD InputRecord[128];
 	DWORD Events;
 	
+	std::chrono::milliseconds frame_start;
 
 	ThreadPool thread;
 
@@ -201,7 +204,13 @@ public:
 	bool mouse_left_press() { return pressed_code(VK_LBUTTON); }
 	bool mouse_click_on(V2d_i pos) { return (pressed_code(VK_LBUTTON) && _mouse == pos); }
 
-	const RunBool&	run()	{ return RunBool(this, isRunning); }
+	const RunBool&	run()	
+	{ 
+		frame_start = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()
+		);
+		return RunBool(this, isRunning); 
+	}
 	void			close() { isRunning = false; }
 	friend RunBool;
 
