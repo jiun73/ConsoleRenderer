@@ -48,7 +48,7 @@ bool selfCollision(const std::list<V2d_i>& snake)
 
 void renderSnake(const std::list<V2d_i>& snake)
 {
-	app.pencil(selfCollision(snake) ? RED : WHITE, BG_DARK_BLUE, '*');
+	app.pencil(WHITE, BG_DARK_BLUE, '*');
 	for (auto& c : snake)
 	{
 		app.pix(c);
@@ -58,53 +58,103 @@ void renderSnake(const std::list<V2d_i>& snake)
 int main()
 {
 	V2d_i pos = {0,0}; //vecteur 2D à la position [0,0]
-	std::list<V2d_i> snake; fillSnake(snake, 5, 30);
+	V2d_i apple_pos = 1;
+	std::list<V2d_i> snake; fillSnake(snake, 5, 1);
+	V2d_i move_vec = 0;
+	bool playing = false;
+	int cntr = 0;
+
+	
+
 	while (app.run())
 	{
-		/*
-			important!!	il faut dessiner du noir pour enlever ce qui est deja dans la console
-			sinon on se retrouve avec des caractères 'fantômes' (on ne les dessine plus, mais il reste parce que rien ne les remplaces)
-			c'est d'ailleurs un problème qui est courant chez les renderers, surtout lorsqu'on sort du terrain normal de jeu appellé 'Hall of mirrors'
-			voir : https://www.reddit.com/r/gamedev/comments/n6bmh7/what_is_this_rendering_bugeffect_called_when_the/
-		*/
-		app.glyph(' '); //met le caractère de dessin à ' '
-		app.rect({ {0, 0 }, { 2, 2 } }); //dessine un Rectangle à [0,0] de largeur 16 et de longueur 16
-		
-		V2d_i move_vec = 0;
-		if (app.held('a')) //si l'utilisateur pèse 'a'
+		if (playing)
 		{
-			move_vec.x -= 1; //bouge le vecteur position vers la droite (composante X - 1)
+			
+			/*
+				important!!	il faut dessiner du noir pour enlever ce qui est deja dans la console
+				sinon on se retrouve avec des caractères 'fantômes' (on ne les dessine plus, mais il reste parce que rien ne les remplaces)
+				c'est d'ailleurs un problème qui est courant chez les renderers, surtout lorsqu'on sort du terrain normal de jeu appellé 'Hall of mirrors'
+				voir : https://www.reddit.com/r/gamedev/comments/n6bmh7/what_is_this_rendering_bugeffect_called_when_the/
+			*/
+			app.glyph(' '); //met le caractère de dessin à ' '
+			app.rect({ {0, 0 }, { 2, 2 } }); //dessine un Rectangle à [0,0] de largeur 16 et de longueur 16
+
+			V2d_i l = move_vec;
+
+			if (app.pressed('a')) //si l'utilisateur pèse 'a'
+			{
+				move_vec = { -1,0 }; //bouge le vecteur position vers la droite (composante X - 1)
+			}
+			else if (app.pressed('d')) //si l'utilisateur pèse 'd'
+			{
+				move_vec = { 1,0 }; //bouge le vecteur position vers la gauche
+			}
+			if (app.pressed('w')) //si l'utilisateur pèse 'w'
+			{
+				move_vec = { 0,-1 }; //haut
+			}
+			else if (app.pressed('s'))
+			{
+				move_vec = { 0,1 }; //bas
+			}
+
+			if (move_vec + l == 0)
+				move_vec = l;
+			
+			cntr--;
+			if (cntr <= 0)
+			{
+				V2d_i last = moveSnake(snake, move_vec);
+				app.pencil(WHITE, BG_BLACK, ' ');
+				app.pix(last);
+				cntr = 100;
+
+				if (last == apple_pos)
+				{
+					apple_pos.x = app.random.range(0, 20);
+					apple_pos.y = app.random.range(0, 20);
+					snake.push_back(last);
+				}
+
+			}
+
+			app.color(WHITE, BG_BLACK);
+
+			if (app.mouse_left_press()) //si on fait un clic gauche
+			{
+				app.text("Allo!", app.mouse()); //dessine le texte 'Allo!' à la position 'app.mouse()' soit la souris
+			}
+
+			app.set_cooldown(0);
+			int ran = app.random.range(48, 74); //génère un nombre entre 48 et 74
+
+			app.pencil(WHITE, BG_DARK_BLUE, ran); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé
+			app.pix(pos); //cela met le pixel en mémoire, avec la position 'pos'
+
+			if (selfCollision(snake))
+			{
+				playing = false;
+			}
+			app.pencil(YELLOW, BG_RED, '@'); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé
+			app.pix(apple_pos); //cela met le pixel en mémoire, avec la position 'pos'
+
+
+			renderSnake(snake);
+			
 		}
-		else if (app.held('d')) //si l'utilisateur pèse 'd'
+		else
 		{
-			move_vec.x += 1; //bouge le vecteur position vers la gauche
+			app.pencil(WHITE, BG_BLACK, ' ');
+			app.text("Play? Y/N", { 1,1 });
+			if (app.pressed('y'))
+			{
+				apple_pos.x = app.random.range(0, 20);
+				apple_pos.y = app.random.range(0, 20);
+				playing = true;
+			}
+			else if (app.pressed('n'))
+				app.close();
 		}
-		else if(app.held('w')) //si l'utilisateur pèse 'w'
-		{
-			move_vec.y -= 1; //haut
-		}
-		else if (app.held('s'))
-		{
-			move_vec.y += 1; //bas
-		}
-
-		V2d_i last = moveSnake(snake, move_vec);
-
-		app.color(WHITE, BG_BLACK);
-		
-		if (app.mouse_left_press()) //si on fait un clic gauche
-		{
-			app.text("Allo!", app.mouse()); //dessine le texte 'Allo!' à la position 'app.mouse()' soit la souris
-		}
-
-		app.set_cooldown(0);
-		int ran = app.random.range(48, 74); //génère un nombre entre 48 et 74
-
-		app.pencil(WHITE, BG_DARK_BLUE, ran); //on va maintenant dessiner avec 'a', blanc sur fond bleu foncé
-		app.pix(pos); //cela met le pixel en mémoire, avec la position 'pos'
-
-		renderSnake(snake);
-		app.pencil(WHITE, BG_BLACK, ' ');
-		app.pix(last);
 	}
 }
